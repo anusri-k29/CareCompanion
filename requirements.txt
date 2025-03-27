@@ -5,3 +5,5 @@ numpy
 Pillow
 transformers
 torch
+opencv-python-headless
+regex
