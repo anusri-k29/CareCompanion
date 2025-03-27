@@ -6,7 +6,6 @@ import json
 import re
 from PIL import Image
 
-# Ensure Tesseract is installed and specify path if necessary
 pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'  # Adjust path as needed
 
 # Function to perform OCR on an image
