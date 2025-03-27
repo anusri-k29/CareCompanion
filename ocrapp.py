@@ -4,8 +4,8 @@ import pytesseract
 from PIL import Image
 import re
 
-# Set Tesseract Path (Update this for deployment if necessary)
-pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"  # Adjust path as needed
+# Set Tesseract Path (Update this for deployment)
+pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"  # Adjust path if needed
 
 st.set_page_config(page_title="OCR & Structured Data Extraction", layout="wide")
 
@@ -14,43 +14,96 @@ def extract_text(image):
     text = pytesseract.image_to_string(image)
     return text.strip()
 
-# Function to extract structured information using regex
+# Function to extract structured information
 def extract_structured_data(text):
-    structured_data = {}
+    structured_data = {
+        "Patient Info": {},
+        "Vitals": {},
+        "Diagnosis": [],
+        "Medications": [],
+        "Investigations": [],
+        "Advice": [],
+        "Follow-Up": {}
+    }
 
-    # Extract Age
+    # Extract Patient Info
     age_match = re.search(r'(\d{1,2})\s*years?\s*old', text, re.IGNORECASE)
-    structured_data["Age"] = age_match.group(1) if age_match else "Not found"
+    structured_data["Patient Info"]["Age"] = age_match.group(1) if age_match else "Not found"
 
-    # Extract Gender
-    if re.search(r'\b(male|female|other)\b', text, re.IGNORECASE):
-        structured_data["Gender"] = re.search(r'\b(male|female|other)\b', text, re.IGNORECASE).group(1)
-    else:
-        structured_data["Gender"] = "Not found"
+    gender_match = re.search(r'\b(male|female|M|F|other)\b', text, re.IGNORECASE)
+    structured_data["Patient Info"]["Gender"] = gender_match.group(1) if gender_match else "Not found"
+
+    weight_match = re.search(r'(\d{2,3})\s*kg', text, re.IGNORECASE)
+    structured_data["Patient Info"]["Weight"] = weight_match.group(1) + " kg" if weight_match else "Not found"
+
+    # Extract Vitals
+    bp_match = re.search(r'(\d{2,3}/\d{2,3})', text)
+    structured_data["Vitals"]["Blood Pressure"] = bp_match.group(1) if bp_match else "Not found"
+
+    # Extract Diagnosis
+    diagnosis_match = re.findall(r"(?<=Diagnosis:)(.*)", text, re.IGNORECASE)
+    structured_data["Diagnosis"] = [d.strip() for d in diagnosis_match if d.strip()]
 
     # Extract Medications
-    meds_match = re.findall(r'\b(?:Tab|Tablet|Cap|Capsule|Syrup|Injection)\s+([A-Za-z0-9]+)', text)
-    structured_data["Medications"] = ", ".join(meds_match) if meds_match else "Not found"
+    med_match = re.findall(r'\b(?:TAB|Tablet|CAP|Capsule|Syrup|Injection)\s+([A-Za-z0-9\s\(\)-]+)', text)
+    structured_data["Medications"] = [m.strip() for m in med_match if m.strip()]
+
+    # Extract Advice
+    advice_match = re.findall(r'(\*.*)', text)
+    structured_data["Advice"] = [a.strip() for a in advice_match if a.strip()]
+
+    # Extract Follow-Up Date
+    followup_match = re.search(r'Follow[- ]?Up:\s*(\d{2}-\d{2}-\d{4})', text)
+    structured_data["Follow-Up"]["Date"] = followup_match.group(1) if followup_match else "Not found"
 
     return structured_data
 
 # Function to display structured data beautifully
 def display_structured_output(structured_data):
-    st.markdown("## 📑 Extracted Structured Information")
-    
-    if structured_data:
-        df = pd.DataFrame(structured_data.items(), columns=["Field", "Value"])
-        st.table(df)  # Nicely formatted table
-    
-    st.markdown("### 🗂️ JSON View")
-    st.json(structured_data, expanded=False)  # Collapsible JSON display
+    st.markdown("## 📑 Structured Medical Data")
 
-# Sidebar for extra details
+    # Patient Info
+    with st.expander("👤 Patient Information", expanded=True):
+        st.table(pd.DataFrame([structured_data["Patient Info"]]))
+
+    # Vitals
+    with st.expander("🩺 Vitals", expanded=True):
+        st.table(pd.DataFrame([structured_data["Vitals"]]))
+
+    # Diagnosis
+    with st.expander("🦠 Diagnosis", expanded=True):
+        if structured_data["Diagnosis"]:
+            st.write("\n".join(f"- {d}" for d in structured_data["Diagnosis"]))
+        else:
+            st.write("No diagnosis found.")
+
+    # Medications
+    with st.expander("💊 Medications", expanded=True):
+        if structured_data["Medications"]:
+            st.write("\n".join(f"- {m}" for m in structured_data["Medications"]))
+        else:
+            st.write("No medications found.")
+
+    # Advice
+    with st.expander("📌 Advice", expanded=True):
+        if structured_data["Advice"]:
+            st.write("\n".join(f"- {a}" for a in structured_data["Advice"]))
+        else:
+            st.write("No advice found.")
+
+    # Follow-Up
+    with st.expander("📅 Follow-Up", expanded=True):
+        st.write(f"**Date:** {structured_data['Follow-Up'].get('Date', 'Not found')}")
+
+# Sidebar for extracted details
 def display_sidebar(structured_data):
     with st.sidebar:
-        st.subheader("🔍 Extracted Details")
-        for key, value in structured_data.items():
-            st.write(f"**{key}:** {value}")
+        st.subheader("🔍 Quick View")
+        st.write(f"**Age:** {structured_data['Patient Info']['Age']}")
+        st.write(f"**Gender:** {structured_data['Patient Info']['Gender']}")
+        st.write(f"**Weight:** {structured_data['Patient Info']['Weight']}")
+        st.write(f"**Blood Pressure:** {structured_data['Vitals']['Blood Pressure']}")
+        st.write(f"**Follow-Up Date:** {structured_data['Follow-Up'].get('Date', 'Not found')}")
 
 # Streamlit App
 def main():
@@ -74,7 +127,7 @@ def main():
             # Display structured output beautifully
             display_structured_output(structured_data)
 
-            # Sidebar for extra details
+            # Sidebar for quick summary
             display_sidebar(structured_data)
 
 if __name__ == "__main__":
