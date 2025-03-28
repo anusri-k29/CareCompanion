@@ -1,5 +1,5 @@
 import streamlit as st
-
+import cv2
 import pytesseract
 import numpy as np
 import json
