@@ -7,8 +7,7 @@ import re
 from PIL import Image
 import os
 
-# Configure Tesseract path (adjust as needed)
-pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
+pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract" 
 
 # Enhanced Medical Regex Patterns
 MEDICAL_PATTERNS = {
