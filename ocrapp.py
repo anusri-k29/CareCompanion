@@ -114,12 +114,12 @@ with st.sidebar:
     analysis_mode = st.radio("Analysis Mode", ["Basic", "Advanced"], index=0)
 
 uploaded_file = st.file_uploader("Upload medical document", type=["jpg", "png", "jpeg"],accept_multiple_files=True)
-if uploaded_files:
+if uploaded_file:
     ocr_processor = OCRProcessor()
     data_extractor = MedicalDataExtractor()
     extracted_texts = []
     
-    for file in uploaded_files:
+    for file in uploaded_file:
         image = Image.open(file)
         img_array = np.array(image)
         extracted_texts.append(ocr_processor.extract_text(img_array))
