@@ -130,79 +130,80 @@ if uploaded_file:
     ocr_processor = OCRProcessor()
     data_extractor = MedicalDataExtractor()
     
-    # Process each image individually
     if st.button("Analyze Documents", type="primary"):
+        # Process each image individually in its own container
         for file in uploaded_file:
-            st.markdown("---")
-            st.subheader(f"Results for {file.name}")
-            
-            image = Image.open(file)
-            img_array = np.array(image)
-            ocr_text = ocr_processor.extract_text(img_array)
-            structured_data = data_extractor.extract_medical_data(ocr_text)
-            
-            st.image(image, caption=f"Document: {file.name}", use_column_width=True)
-            
-            col1, col2 = st.columns([1, 2])
-            with col1:
-                st.subheader("🧑 Patient Information")
-                patient_info = structured_data["patient"]
-                if patient_info:
-                    info_text = f"""
-                    - Age: {patient_info.get('age', 'N/A')}
-                    - Gender: {patient_info.get('gender', 'N/A')}
-                    - Weight: {patient_info.get('weight', 'N/A')}
-                    """
-                    st.markdown(info_text)
-                else:
-                    st.warning("No patient information found")
+            with st.container():
+                st.markdown("---")
+                st.subheader(f"Results for {file.name}")
                 
-                st.subheader("📝 Patient Complaints")
-                if structured_data["complaints"]:
-                    complaints_md = "\n".join([f"- {c}" for c in structured_data["complaints"]])
-                    st.markdown(complaints_md)
-                else:
-                    st.info("No complaints mentioned")
+                image = Image.open(file)
+                img_array = np.array(image)
+                ocr_text = ocr_processor.extract_text(img_array)
+                structured_data = data_extractor.extract_medical_data(ocr_text)
                 
-                st.subheader("📈 Vitals")
-                if structured_data["vitals"]:
-                    vitals_md = "\n".join([f"- {k.upper()}: {v}" for k, v in structured_data["vitals"].items()])
-                    st.markdown(vitals_md)
-                else:
-                    st.info("No vital signs detected")
+                st.image(image, caption=f"Document: {file.name}", use_column_width=True)
+                
+                col1, col2 = st.columns([1, 2])
+                with col1:
+                    st.subheader("🧑 Patient Information")
+                    patient_info = structured_data["patient"]
+                    if patient_info:
+                        info_text = f"""
+                        - Age: {patient_info.get('age', 'N/A')}
+                        - Gender: {patient_info.get('gender', 'N/A')}
+                        - Weight: {patient_info.get('weight', 'N/A')}
+                        """
+                        st.markdown(info_text)
+                    else:
+                        st.warning("No patient information found")
                     
-            with col2:
-                tab1, tab2, tab3, tab4 = st.tabs(["Diagnosis", "Medications", "Advice", "Follow Up"])
-                with tab1:
-                    if structured_data["diagnosis"]:
-                        st.markdown("**Primary Diagnosis:**")
-                        for dx in structured_data["diagnosis"]:
-                            st.markdown(f"- {dx}")
+                    st.subheader("📝 Patient Complaints")
+                    if structured_data["complaints"]:
+                        complaints_md = "\n".join([f"- {c}" for c in structured_data["complaints"]])
+                        st.markdown(complaints_md)
                     else:
-                        st.error("No diagnosis information found")
-                with tab2:
-                    if structured_data["medications"]:
-                        for i, med in enumerate(structured_data["medications"], 1):
-                            with st.expander(f"Medication #{i}"):
-                                st.markdown(f"**Prescription:** {med}")
+                        st.info("No complaints mentioned")
+                    
+                    st.subheader("📈 Vitals")
+                    if structured_data["vitals"]:
+                        vitals_md = "\n".join([f"- {k.upper()}: {v}" for k, v in structured_data["vitals"].items()])
+                        st.markdown(vitals_md)
                     else:
-                        st.warning("No medications prescribed")
-                with tab3:
-                    if structured_data["advice"]:
-                        st.markdown("**Patient Instructions:**")
-                        for advice in structured_data["advice"]:
-                            st.markdown(f"✅ {advice}")
-                    else:
-                        st.info("No specific advice provided")
-                with tab4:
-                    if structured_data["follow_up"].get("date"):
-                        st.markdown(f"**Next Appointment:** 📅 {structured_data['follow_up']['date']}")
-                    else:
-                        st.warning("No follow-up date specified")
+                        st.info("No vital signs detected")
                 
-            if show_raw_text:
-                st.subheader("Raw OCR Output")
-                st.code(ocr_text)
+                with col2:
+                    tab1, tab2, tab3, tab4 = st.tabs(["Diagnosis", "Medications", "Advice", "Follow Up"])
+                    with tab1:
+                        if structured_data["diagnosis"]:
+                            st.markdown("**Primary Diagnosis:**")
+                            for dx in structured_data["diagnosis"]:
+                                st.markdown(f"- {dx}")
+                        else:
+                            st.error("No diagnosis information found")
+                    with tab2:
+                        if structured_data["medications"]:
+                            for i, med in enumerate(structured_data["medications"], 1):
+                                with st.expander(f"Medication #{i}"):
+                                    st.markdown(f"**Prescription:** {med}")
+                        else:
+                            st.warning("No medications prescribed")
+                    with tab3:
+                        if structured_data["advice"]:
+                            st.markdown("**Patient Instructions:**")
+                            for advice in structured_data["advice"]:
+                                st.markdown(f"✅ {advice}")
+                        else:
+                            st.info("No specific advice provided")
+                    with tab4:
+                        if structured_data["follow_up"].get("date"):
+                            st.markdown(f"**Next Appointment:** 📅 {structured_data['follow_up']['date']}")
+                        else:
+                            st.warning("No follow-up date specified")
+                
+                if show_raw_text:
+                    st.subheader("Raw OCR Output")
+                    st.code(ocr_text)
 
 st.markdown("---")
 st.markdown("*Medical data extraction powered by Tesseract OCR and advanced NLP patterns*")
