@@ -69,7 +69,7 @@ class MedicalDataExtractor:
         result = {
             "patient": {}, "vitals": {}, "diagnosis": [],
             "medications": [], "investigations": [],
-            "advice": [], "follow_up": {}
+            "advice": [], "follow_up": {},"complaints": []
         }
 
         # Extract patient info
@@ -84,6 +84,11 @@ class MedicalDataExtractor:
 
         # Extract vitals
         result["vitals"] = self.extract_vitals(text)
+
+         # Extract complaints
+        complaints = re.search(MEDICAL_PATTERNS['clinical']['complaints'], text)
+        if complaints: result["complaints"] = [c.strip() for c in complaints.group(1).split('\n') if c.strip()]
+
 
         # Extract diagnosis
         diagnosis = re.search(MEDICAL_PATTERNS['clinical']['diagnosis'], text)
@@ -111,8 +116,7 @@ st.markdown("Upload a medical prescription/image to extract structured healthcar
 with st.sidebar:
     st.header("Settings")
     show_raw_text = st.checkbox("Show raw OCR text", value=False)
-    analysis_mode = st.radio("Analysis Mode", ["Basic", "Advanced"], index=0)
-
+    
 uploaded_file = st.file_uploader("Upload medical document", type=["jpg", "png", "jpeg"],accept_multiple_files=True)
 if uploaded_file:
     ocr_processor = OCRProcessor()
@@ -148,6 +152,13 @@ if uploaded_file:
                 st.markdown(info_text)
             else:
                 st.warning("No patient information found")
+
+            st.subheader("📝 Patient Complaints")
+            if structured_data["complaints"]:
+                complaints_md = "\n".join([f"- {c}" for c in structured_data["complaints"]])
+                st.markdown(complaints_md)
+            else:
+                st.info("No complaints mentioned")
 
             st.subheader("📈 Vitals")
             if structured_data["vitals"]:
