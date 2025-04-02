@@ -8,7 +8,6 @@ from PIL import Image
 import os
 
 pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract" 
-
 # Enhanced Medical Regex Patterns
 MEDICAL_PATTERNS = {
     'patient': {
