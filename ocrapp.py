@@ -42,12 +42,12 @@ MEDICAL_PATTERNS = {
 class OCRProcessor:
     def extract_text(self, image):
     # Check if the image is already grayscale
-    if len(image.shape) == 2 or (len(image.shape) == 3 and image.shape[2] == 1):
-        gray = image
-    else:
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    text = pytesseract.image_to_string(gray)
-    return text
+        if len(image.shape) == 2 or (len(image.shape) == 3 and image.shape[2] == 1):
+            gray = image
+        else:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        text = pytesseract.image_to_string(gray)
+        return text
 
 class MedicalDataExtractor:
     def extract_age_gender(self, text):
