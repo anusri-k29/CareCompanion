@@ -126,7 +126,7 @@ if uploaded_file:
     
     full_text = "\n".join(extracted_texts)
     if st.button("Analyze Document", type="primary"):
-        extracted_text = ocr_processor.extract_text(img_array)
+        
         structured_data = data_extractor.extract_medical_data(full_text)
 
 
@@ -191,7 +191,7 @@ if uploaded_file:
 
         if show_raw_text:
             st.subheader("Raw OCR Output")
-            st.code(extracted_text)
+            st.code(full_text)
 
 st.markdown("---")
 st.markdown("*Medical data extraction powered by Tesseract OCR and advanced NLP patterns*")
