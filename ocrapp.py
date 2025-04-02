@@ -28,7 +28,7 @@ MEDICAL_PATTERNS = {
             'rr': r'(?i)(?:RR|Respiratory\s*Rate)[\s:]*(\d{2})\s*(?:/min)?',
             'spo2': r'(?i)(?:SpO2|Oxygen\s*Saturation)[\s:]*(\d{2,3})\s*%?'
         },
-        'complaints': r'(?i)Chief\s*Complaints[:\s-]+([\s\S]+?)(?=\n)',
+        'complaints': r'(?i)\b(?:Chief|Primary|Patient)?\s*Complaints?[:\s-]+([\s\S]+?)(?=\n\s*\n|\b(?:Diagnosis|History|Findings|Medications|Investigations|Advice)\b)',
         'reactions': r'(?i)(?:Adverse\s*Reactions)[\s:]+([\s\S]+?)(?=\n)',
         'investigations': r'(?i)(?:Investigations|Tests)[:\s-]+([\s\S]+?)(?=\n\s*\n|Medicine|Advice|$)'
     },
