@@ -9,16 +9,6 @@ import os
 
 pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract" 
 
-import streamlit as st
-import cv2
-import pytesseract
-import numpy as np
-import re
-from PIL import Image
-import os
-
-pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
-
 # Enhanced Medical Regex Patterns
 MEDICAL_PATTERNS = {
     'patient': {
@@ -47,48 +37,81 @@ MEDICAL_PATTERNS = {
     },
     'advice': r'(?i)Advice[:\s-]+([\s\S]+?)(?=\n\s*(?:Follow\s*Up|Next\s*Visit)|$)',
     'follow_up': r'(?i)Follow\s*Up[:\s-]+(\d{2}[\/\-]\d{2}[\/\-]\d{2,4})'
-} 
+}
 
 class OCRProcessor:
     def extract_text(self, image):
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        return pytesseract.image_to_string(gray)
+        text = pytesseract.image_to_string(gray)
+        return text
 
 class MedicalDataExtractor:
+    def extract_age_gender(self, text):
+        m1 = re.search(MEDICAL_PATTERNS['patient']['age_gender_pattern1'], text)
+        if m1: return m1.group('age1'), m1.group('gender1')
+        m2 = re.search(MEDICAL_PATTERNS['patient']['age_gender_pattern2'], text)
+        if m2: return m2.group('age2'), m2.group('gender2')
+        return None, None
+
+    def extract_vitals(self, text):
+        vitals = {}
+        for vital, pattern in MEDICAL_PATTERNS['clinical']['vitals'].items():
+            match = re.search(pattern, text)
+            if match: vitals[vital] = match.group(1).strip()
+        return vitals
+
     def extract_medical_data(self, text):
         text = re.sub(r'[ \t]+', ' ', text)
         text = re.sub(r'\n\s*\n', '\n\n', text)
-        result = {"patient": {}, "vitals": {}, "diagnosis": [], "medications": [], "advice": [], "follow_up": {}}
         
-        # Extract patient details
+        result = {
+            "patient": {}, "vitals": {}, "diagnosis": [],
+            "medications": [], "investigations": [],
+            "advice": [], "follow_up": {}
+        }
+
+        # Extract patient info
         age, gender = self.extract_age_gender(text)
         if age and gender:
-            result["patient"].update({"age": age, "gender": gender})
-        
-        # Extract vitals and other medical data
+            result["patient"]["age"] = age
+            result["patient"]["gender"] = gender
+
+        # Extract weight
+        weight = re.search(MEDICAL_PATTERNS['patient_extra']['weight'], text, re.I)
+        if weight: result["patient"]["weight"] = f"{weight.group(1)} kg"
+
+        # Extract vitals
         result["vitals"] = self.extract_vitals(text)
-        result["diagnosis"] = self.extract_list_data(text, MEDICAL_PATTERNS['clinical']['diagnosis'])
-        result["medications"] = self.extract_list_data(text, MEDICAL_PATTERNS['medications']['pattern'])
-        result["advice"] = self.extract_list_data(text, MEDICAL_PATTERNS['advice'])
-        result["follow_up"]["date"] = self.extract_follow_up(text)
-        
+
+        # Extract diagnosis
+        diagnosis = re.search(MEDICAL_PATTERNS['clinical']['diagnosis'], text)
+        if diagnosis: result["diagnosis"] = [d.strip() for d in diagnosis.group(1).split('\n') if d.strip()]
+
+        # Extract medications
+        meds = re.findall(MEDICAL_PATTERNS['medications']['pattern'], text)
+        if meds: result["medications"] = [re.sub(r'\s+', ' ', m).strip() for m in meds]
+
+        # Extract advice
+        advice = re.search(MEDICAL_PATTERNS['advice'], text)
+        if advice: result["advice"] = [a.strip() for a in advice.group(1).split('\n') if a.strip()]
+
+        # Extract follow-up
+        follow_up = re.search(MEDICAL_PATTERNS['follow_up'], text)
+        if follow_up: result["follow_up"]["date"] = follow_up.group(1).strip()
+
         return result
-
-    def extract_list_data(self, text, pattern):
-        match = re.search(pattern, text)
-        return [d.strip() for d in match.group(1).split('\n') if d.strip()] if match else []
-
-    def extract_follow_up(self, text):
-        match = re.search(MEDICAL_PATTERNS['follow_up'], text)
-        return match.group(1).strip() if match else None
 
 # Streamlit UI
 st.set_page_config(page_title="MedScan Pro", layout="wide")
 st.title("🩺 MedScan Pro - Smart Medical Document Analysis")
-st.markdown("Upload medical images or PDFs to extract structured healthcare data")
+st.markdown("Upload a medical prescription/image to extract structured healthcare data")
 
-uploaded_files = st.file_uploader("Upload medical documents", type=["jpg", "png", "jpeg", "pdf"], accept_multiple_files=True)
+with st.sidebar:
+    st.header("Settings")
+    show_raw_text = st.checkbox("Show raw OCR text", value=False)
+    analysis_mode = st.radio("Analysis Mode", ["Basic", "Advanced"], index=0)
 
+uploaded_file = st.file_uploader("Upload medical document", type=["jpg", "png", "jpeg"],accept_multiple_files=True)
 if uploaded_files:
     ocr_processor = OCRProcessor()
     data_extractor = MedicalDataExtractor()
@@ -100,18 +123,73 @@ if uploaded_files:
         extracted_texts.append(ocr_processor.extract_text(img_array))
     
     full_text = "\n".join(extracted_texts)
-    structured_data = data_extractor.extract_medical_data(full_text)
-    
-    st.success("Analysis Complete!")
-    st.balloons()
-    
-    st.subheader("Structured Data Output")
-    st.json(structured_data)
-    
-    if st.checkbox("Show Raw OCR Text"):
-        st.subheader("Raw OCR Output")
-        st.code(full_text)
+    if st.button("Analyze Document", type="primary"):
+        extracted_text = ocr_processor.extract_text(img_array)
+        structured_data = data_extractor.extract_medical_data(full_text)
+
+
+        # Display Results
+        st.success("Analysis Complete!")
+        st.balloons()
+        
+        col1, col2 = st.columns([1, 2])
+        
+        with col1:
+            st.subheader("🧑 Patient Information")
+            patient_info = structured_data["patient"]
+            if patient_info:
+                info_text = f"""
+                - Age: {patient_info.get('age', 'N/A')}
+                - Gender: {patient_info.get('gender', 'N/A')}
+                - Weight: {patient_info.get('weight', 'N/A')}
+                """
+                st.markdown(info_text)
+            else:
+                st.warning("No patient information found")
+
+            st.subheader("📈 Vitals")
+            if structured_data["vitals"]:
+                vitals_md = "\n".join([f"- {k.upper()}: {v}" for k, v in structured_data["vitals"].items()])
+                st.markdown(vitals_md)
+            else:
+                st.info("No vital signs detected")
+
+        with col2:
+            tab1, tab2, tab3, tab4 = st.tabs(["Diagnosis", "Medications", "Advice", "Follow Up"])
+
+            with tab1:
+                if structured_data["diagnosis"]:
+                    st.markdown("**Primary Diagnosis:**")
+                    for dx in structured_data["diagnosis"]:
+                        st.markdown(f"- {dx}")
+                else:
+                    st.error("No diagnosis information found")
+
+            with tab2:
+                if structured_data["medications"]:
+                    for i, med in enumerate(structured_data["medications"], 1):
+                        with st.expander(f"Medication #{i}"):
+                            st.markdown(f"**Prescription:** {med}")
+                else:
+                    st.warning("No medications prescribed")
+
+            with tab3:
+                if structured_data["advice"]:
+                    st.markdown("**Patient Instructions:**")
+                    for advice in structured_data["advice"]:
+                        st.markdown(f"✅ {advice}")
+                else:
+                    st.info("No specific advice provided")
+
+            with tab4:
+                if structured_data["follow_up"].get("date"):
+                    st.markdown(f"**Next Appointment:** 📅 {structured_data['follow_up']['date']}")
+                else:
+                    st.warning("No follow-up date specified")
+
+        if show_raw_text:
+            st.subheader("Raw OCR Output")
+            st.code(extracted_text)
 
 st.markdown("---")
 st.markdown("*Medical data extraction powered by Tesseract OCR and advanced NLP patterns*")
-
