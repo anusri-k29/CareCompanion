@@ -61,6 +61,8 @@ class MedicalDataExtractor:
         return vitals
 
     def extract_medical_data(self, text):
+        if not isinstance(text, str):  # Ensure text is a string
+            text = str(text) if text is not None else ""
         text = re.sub(r'[ \t]+', ' ', text)
         text = re.sub(r'\n\s*\n', '\n\n', text)
         
