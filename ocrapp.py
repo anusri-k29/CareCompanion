@@ -145,7 +145,7 @@ if uploaded_file:
                 ocr_text = ocr_processor.extract_text(img_array)
                 structured_data = data_extractor.extract_medical_data(ocr_text)
                 
-                st.image(image, caption=f"Document: {file.name}", use_column_width=True)
+                st.image(image, caption=f"Document: {file.name}", width=250)
                 
                 col1, col2 = st.columns([1, 2])
                 with col1:
